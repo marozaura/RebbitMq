@@ -1,40 +1,45 @@
-﻿using System.Text;
+﻿using System.Diagnostics.Metrics;
+using System.Text;
 using RabbitMQ.Client;
 
-Task.Run(PublishMessage(10000, "error"));
-//Task.Run(PublishMessage(12000, "warning"));
 
-Console.ReadLine();
 
-static Func<Task> PublishMessage(int timeToSleepTo, string routingKey)
+
+var counter = 0;
+do
 {
-    return () =>
-    {
-        var counter = 0;
-        do
-        {
+    var random = new Random();
+    var routingKey = counter % 4 == 0
+        ? "tesla.red.fast.ecological"
+        : $"{GetResourse().Item1[random.Next(0, 3)]}.{GetResourse().Item2[random.Next(0, 3)]}";
+    var timeToSleep = random.Next(1000, 5000);
+    Thread.Sleep(timeToSleep);
+    var factory = new ConnectionFactory() { HostName = "localhost" };
+    using var connection = factory.CreateConnection();
+    using var chanel = connection.CreateModel();
 
-            var timeToSleep = new Random().Next(1000, timeToSleepTo);
-            Thread.Sleep(timeToSleep);
-            var factory = new ConnectionFactory() { HostName = "localhost" };
-            using var connection = factory.CreateConnection();
-            using var chanel = connection.CreateModel();
+    chanel.ExchangeDeclare(exchange: "topic_logs", ExchangeType.Topic);
 
-            chanel.ExchangeDeclare(exchange: "direct_logs", ExchangeType.Direct);
+    counter++;
+    var message = $"message type [topic] from publisher {counter}";
+    var messageBytes = Encoding.UTF8.GetBytes(message);
 
-            counter++;
-            var message = $"message type [error] from publisher {counter}";
-            var messageBytes = Encoding.UTF8.GetBytes(message);
+    chanel.BasicPublish(exchange: "topic_logs",
+        routingKey: routingKey,
+        basicProperties: null,
+    body: messageBytes);
 
-            chanel.BasicPublish(exchange: "direct_logs",
-                routingKey: routingKey,
-                basicProperties: null,
-                body: messageBytes);
+    Console.WriteLine($"message type {routingKey} sent to topic exchange #{counter}");
+} while (true);
 
-            Console.WriteLine($"message type {routingKey} sent to direct exchange #{counter}");
-        } while (true);
-    };
+
+
+
+
+static (List<string>, List<string>) GetResourse()
+{
+    return (new List<string> { "BWM", "Audi", "Mersedec" },
+        new List<string> { "White", "Red", "Green" });
 }
-
 
 

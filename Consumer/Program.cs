@@ -2,15 +2,17 @@
 using System.Text;
 using RabbitMQ.Client.Events;
 
-var factory = new ConnectionFactory() { HostName = "localhost" };
+
+
+var factory = new ConnectionFactory { HostName = "localhost" };
 using var connection = factory.CreateConnection();
 using var chanel = connection.CreateModel();
 
-chanel.ExchangeDeclare(exchange: "direct_logs", ExchangeType.Direct);
+chanel.ExchangeDeclare(exchange: "topic_logs", ExchangeType.Topic);
 
 var queueName = chanel.QueueDeclare().QueueName;
 
-chanel.QueueBind(queueName, "direct_logs", "error");
+chanel.QueueBind(queueName, "topic_logs", "*.*.*.ecological");
 
 var consumer  = new EventingBasicConsumer(chanel);
 
